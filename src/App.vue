@@ -2,6 +2,7 @@
   <div id="app" :class="{ 'dark-mode': isDarkMode }">
     <AppLayout />
     <Toast />
+    <BurgerMenu />
   </div>
 </template>
 
@@ -9,6 +10,7 @@
 import { computed, onMounted } from 'vue'
 import AppLayout from '@/components/layout/AppLayout.vue'
 import Toast from '@/components/common/Toast.vue'
+import BurgerMenu from '@/components/common/BurgerMenu.vue'
 import { useProjectStore } from '@/stores/projectStore'
 import { useSettingsStore } from '@/stores/settingsStore'
 import { useAutoSave } from '@/composables/useAutoSave'
@@ -34,6 +36,8 @@ onMounted(() => {
 </script>
 
 <style>
+@import '@/assets/styles/main.css';
+
 #app {
   width: 100vw;
   height: 100vh;
