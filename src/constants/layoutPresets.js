@@ -7,7 +7,6 @@ export const LAYOUT_PRESETS = {
   DESIGNER: 'designer',
   DEVELOPER: 'developer',
   MINI: 'mini',
-  CUSTOM: 'custom',
 }
 
 export const PRESET_CONFIGS = {
@@ -69,18 +68,6 @@ export const PRESET_CONFIGS = {
       },
     },
     defaultMode: 'canvas',
-  },
-
-  [LAYOUT_PRESETS.CUSTOM]: {
-    name: 'Custom',
-    description: 'Your custom layout',
-    icon: '⚙️',
-    panels: ['canvas', 'middle', 'code'],
-    widths: {
-      canvas: 40,
-      middle: 20,
-      code: 40,
-    },
   },
 }
 

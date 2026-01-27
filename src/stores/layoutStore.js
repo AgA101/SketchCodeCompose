@@ -76,12 +76,8 @@ export const useLayoutStore = defineStore('layout', {
     },
 
     updatePanelWidth(panelName, width) {
+      // Просто обновляем ширину панели, режим остается прежним
       this.panelWidths[panelName] = width
-      
-      // Если пользователь меняет размеры вручную - переключаемся на custom
-      if (this.currentPreset !== LAYOUT_PRESETS.CUSTOM) {
-        this.currentPreset = LAYOUT_PRESETS.CUSTOM
-      }
     },
 
     isPanelVisible(panelName) {
