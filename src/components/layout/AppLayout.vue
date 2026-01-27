@@ -11,11 +11,10 @@
         />
 
         <!-- Resizer между панелями -->
-        <div
+        <ResizeHandle
           v-if="needsResizer(index)"
-          class="resizer"
-          @mousedown="startResize(panelName, $event)"
-        ></div>
+          @resize="handleResize(panelName, $event)"
+        />
       </template>
     </div>
   </div>
@@ -27,6 +26,7 @@ import CanvasPanel from '@/components/panels/CanvasPanel.vue'
 import PropertiesPanel from '@/components/panels/PropertiesPanel.vue'
 import TreePanel from '@/components/panels/TreePanel.vue'
 import CodePanel from '@/components/panels/CodePanel.vue'
+import ResizeHandle from '@/components/common/ResizeHandle.vue'
 import { useLayoutStore } from '@/stores/layoutStore'
 
 const layoutStore = useLayoutStore()
@@ -59,28 +59,12 @@ function needsResizer(index) {
 }
 
 // Resize logic
-let isResizing = false
-let resizeTarget = null
-let startWidths = {}
-
-function startResize(panelName, event) {
-  isResizing = true
-  resizeTarget = panelName
-  startWidths = { ...layoutStore.panelWidths }
-  
-  document.addEventListener('mousemove', handleResize)
-  document.addEventListener('mouseup', stopResize)
-  event.preventDefault()
-}
-
-function handleResize(event) {
-  if (!isResizing) return
-
+function handleResize(panelName, newWidthPx) {
   const containerWidth = window.innerWidth
-  const percentage = (event.clientX / containerWidth) * 100
+  const newWidthPercent = (newWidthPx / containerWidth) * 100
 
   const panels = visiblePanels.value
-  const targetIndex = panels.indexOf(resizeTarget)
+  const targetIndex = panels.indexOf(panelName)
   
   if (targetIndex === -1) return
 
@@ -89,27 +73,23 @@ function handleResize(event) {
 
   if (!nextPanel) return
 
-  // Вычисляем новую ширину
-  let newWidth = Math.max(15, Math.min(80, percentage))
+  // Ограничиваем ширину от 15% до 80%
+  const clampedWidth = Math.max(15, Math.min(80, newWidthPercent))
   
-  const oldWidth = startWidths[target]
-  const delta = newWidth - oldWidth
+  // Вычисляем изменение ширины
+  const oldWidth = layoutStore.panelWidths[target]
+  const delta = clampedWidth - oldWidth
   
-  layoutStore.updatePanelWidth(target, newWidth)
+  // Обновляем ширину текущей панели
+  layoutStore.updatePanelWidth(target, clampedWidth)
   
-  const nextOldWidth = startWidths[nextPanel] || layoutStore.panelWidths[nextPanel]
-  layoutStore.updatePanelWidth(nextPanel, Math.max(15, nextOldWidth - delta))
-}
-
-function stopResize() {
-  if (isResizing) {
-    layoutStore.saveLayout()
-  }
+  // Обновляем ширину следующей панели (уменьшаем на столько, на сколько увеличили текущую)
+  const nextOldWidth = layoutStore.panelWidths[nextPanel]
+  const nextNewWidth = Math.max(15, nextOldWidth - delta)
+  layoutStore.updatePanelWidth(nextPanel, nextNewWidth)
   
-  isResizing = false
-  resizeTarget = null
-  document.removeEventListener('mousemove', handleResize)
-  document.removeEventListener('mouseup', stopResize)
+  // Сохраняем layout
+  layoutStore.saveLayout()
 }
 </script>
 
@@ -131,18 +111,6 @@ function stopResize() {
 .panel {
   height: 100%;
   flex-shrink: 0;
-}
-
-.resizer {
-  width: 4px;
-  cursor: col-resize;
-  background-color: var(--color-border);
-  transition: background-color var(--transition-fast);
-  flex-shrink: 0;
-}
-
-.resizer:hover {
-  background-color: var(--color-accent);
 }
 </style>
 
