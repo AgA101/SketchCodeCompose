@@ -13,7 +13,7 @@
         <!-- Resizer между панелями -->
         <ResizeHandle
           v-if="needsResizer(index)"
-          @resize="handleResize(panelName, $event)"
+          :panel-name="panelName"
         />
       </template>
     </div>
@@ -56,40 +56,6 @@ function getPanelWidth(panelName) {
 function needsResizer(index) {
   // Resizer нужен если это не последняя панель
   return index < visiblePanels.value.length - 1
-}
-
-// Resize logic
-function handleResize(panelName, newWidthPx) {
-  const containerWidth = window.innerWidth
-  const newWidthPercent = (newWidthPx / containerWidth) * 100
-
-  const panels = visiblePanels.value
-  const targetIndex = panels.indexOf(panelName)
-  
-  if (targetIndex === -1) return
-
-  const target = panels[targetIndex]
-  const nextPanel = panels[targetIndex + 1]
-
-  if (!nextPanel) return
-
-  // Ограничиваем ширину от 15% до 80%
-  const clampedWidth = Math.max(15, Math.min(80, newWidthPercent))
-  
-  // Вычисляем изменение ширины
-  const oldWidth = layoutStore.panelWidths[target]
-  const delta = clampedWidth - oldWidth
-  
-  // Обновляем ширину текущей панели
-  layoutStore.updatePanelWidth(target, clampedWidth)
-  
-  // Обновляем ширину следующей панели (уменьшаем на столько, на сколько увеличили текущую)
-  const nextOldWidth = layoutStore.panelWidths[nextPanel]
-  const nextNewWidth = Math.max(15, nextOldWidth - delta)
-  layoutStore.updatePanelWidth(nextPanel, nextNewWidth)
-  
-  // Сохраняем layout
-  layoutStore.saveLayout()
 }
 </script>
 

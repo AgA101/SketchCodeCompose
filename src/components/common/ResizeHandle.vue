@@ -9,19 +9,36 @@
 </template>
 
 <script setup>
-import { ref } from 'vue'
+import { ref, computed } from 'vue'
+import { useLayoutStore } from '@/stores/layoutStore'
 
-const emit = defineEmits(['resize'])
+const props = defineProps({
+  panelName: {
+    type: String,
+    required: true,
+  },
+})
 
+const layoutStore = useLayoutStore()
 const isDragging = ref(false)
+
 let startX = 0
 let startWidth = 0
 
+// Находим следующую панель
+const nextPanelName = computed(() => {
+  const panels = layoutStore.visiblePanels
+  const currentIndex = panels.indexOf(props.panelName)
+  return panels[currentIndex + 1] || null
+})
+
 function startDrag(e) {
+  if (!nextPanelName.value) return
+
   isDragging.value = true
   startX = e.clientX
 
-  // Получаем ширину предыдущей панели
+  // Получаем ширину текущей панели
   const panel = e.target.previousElementSibling
   if (panel) {
     startWidth = panel.offsetWidth
@@ -30,20 +47,41 @@ function startDrag(e) {
   document.addEventListener('mousemove', onDrag)
   document.addEventListener('mouseup', stopDrag)
   
-  // Предотвращаем выделение текста
   e.preventDefault()
 }
 
 function onDrag(e) {
-  if (!isDragging.value) return
+  if (!isDragging.value || !nextPanelName.value) return
 
+  const containerWidth = window.innerWidth
   const deltaX = e.clientX - startX
-  const newWidth = startWidth + deltaX
+  const newWidthPx = startWidth + deltaX
+  const newWidthPercent = (newWidthPx / containerWidth) * 100
 
-  emit('resize', newWidth)
+  // Получаем текущие ширины
+  const currentWidth = layoutStore.panelWidths[props.panelName]
+  const nextWidth = layoutStore.panelWidths[nextPanelName.value]
+  
+  // Сумма ширин двух панелей (константа)
+  const totalWidth = currentWidth + nextWidth
+  
+  // Минимальная ширина
+  const MIN_WIDTH = 15
+  
+  // Ограничиваем ширину
+  const clampedWidth = Math.max(MIN_WIDTH, Math.min(totalWidth - MIN_WIDTH, newWidthPercent))
+  const clampedNextWidth = totalWidth - clampedWidth
+  
+  // Обновляем store напрямую
+  layoutStore.updatePanelWidth(props.panelName, clampedWidth)
+  layoutStore.updatePanelWidth(nextPanelName.value, clampedNextWidth)
 }
 
 function stopDrag() {
+  if (isDragging.value) {
+    layoutStore.saveLayout()
+  }
+  
   isDragging.value = false
   document.removeEventListener('mousemove', onDrag)
   document.removeEventListener('mouseup', stopDrag)
