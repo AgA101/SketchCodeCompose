@@ -19,7 +19,7 @@ export const useCanvasStore = defineStore('canvas', {
     snapDistance: 5, // пикселей
 
     // Текущий инструмент
-    tool: 'select', // 'select' | 'hand' | 'zoom'
+    tool: 'select', // 'select' | 'block' | 'hand' | 'zoom'
 
     // Smart guides
     guides: [], // Массив активных направляющих

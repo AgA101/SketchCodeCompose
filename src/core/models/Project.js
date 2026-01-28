@@ -49,6 +49,12 @@ export class Project {
       if (!this.rootElements.includes(element.id)) {
         this.rootElements.push(element.id)
       }
+    } else {
+      // Если есть родитель - добавляем в его children
+      const parent = this.elements.get(element.parentId)
+      if (parent && !parent.children.includes(element.id)) {
+        parent.children.push(element.id)
+      }
     }
     
     this.metadata.updatedAt = new Date()

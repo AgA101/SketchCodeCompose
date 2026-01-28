@@ -13,6 +13,7 @@
           v-for="tool in pinnedTools"
           :key="tool.id"
           class="tool-button"
+          :class="{ 'tool-button--active': isToolActive(tool.id) }"
           :title="tool.label"
           @click="tool.action"
         >
@@ -31,22 +32,42 @@ import { useCanvasStore } from '@/stores/canvasStore'
 const { toggleMenu } = useMenu()
 const canvasStore = useCanvasStore()
 
-// Закрепленные инструменты (для демонстрации)
+// Текущий активный инструмент
+const currentTool = ref('select')
+
+// Функция переключения инструмента
+function setTool(toolId) {
+  currentTool.value = toolId
+  canvasStore.setTool(toolId)
+}
+
+// Проверка активен ли инструмент
+function isToolActive(toolId) {
+  return currentTool.value === toolId
+}
+
+// Закрепленные инструменты (теперь переключают режим, а не выполняют действие)
 const pinnedTools = ref([
   {
-    id: 'semantics',
-    icon: '🎨',
-    label: 'Semantic Mode',
-    action: () => canvasStore.toggleSemanticHighlight?.() || console.log('Toggle Semantics')
+    id: 'select',
+    icon: '🖱️',
+    label: 'Select & Move',
+    action: () => setTool('select')
+  },
+  {
+    id: 'block',
+    icon: '🟦',
+    label: 'Block Tool (Ctrl+N)\nLeft Click = Add\nRight Click = Delete\nLong Press = Delete',
+    action: () => setTool('block')
   },
   {
     id: 'grid',
     icon: '⊞',
-    label: 'Grid',
+    label: 'Toggle Grid (Ctrl+G)',
     action: () => canvasStore.toggleGrid()
   },
-  { id: 'undo', icon: '↶', label: 'Undo', action: () => console.log('Undo') },
-  { id: 'redo', icon: '↷', label: 'Redo', action: () => console.log('Redo') }
+  { id: 'undo', icon: '↶', label: 'Undo (Ctrl+Z)', action: () => console.log('Undo') },
+  { id: 'redo', icon: '↷', label: 'Redo (Ctrl+Shift+Z)', action: () => console.log('Redo') }
 ])
 </script>
 
@@ -118,6 +139,12 @@ const pinnedTools = ref([
 
 .tool-button:hover {
   background-color: #2d2d2d;
+}
+
+/* Активный инструмент */
+.tool-button--active {
+  background-color: var(--color-accent) !important;
+  color: white;
 }
 
 /* Все стили меню удалены - теперь используется общий BurgerMenu */
