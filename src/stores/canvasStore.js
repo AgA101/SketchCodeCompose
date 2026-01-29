@@ -8,15 +8,15 @@ export const useCanvasStore = defineStore('canvas', {
 
     // Настройки отображения
     showGrid: true,
-    gridSize: 8,
+    gridSize: 8, // 1, 2, 4, 8, 16, 32, 64 или custom
     showRulers: false,
     showSemanticHighlight: false,
 
     // Snap настройки
     snapToGrid: true,
-    snapToElements: true,
-    snapToCenter: true,
-    snapDistance: 5, // пикселей
+    snapToElements: false, // Пока не реализовано
+    snapToCenter: false, // Для Smart Guides
+    snapDistance: 5, // пикселей для snap to elements
 
     // Текущий инструмент
     tool: 'select', // 'select' | 'block' | 'hand' | 'zoom'
@@ -107,7 +107,14 @@ export const useCanvasStore = defineStore('canvas', {
      * Установить размер сетки
      */
     setGridSize(size) {
-      this.gridSize = Math.max(4, Math.min(64, size))
+      this.gridSize = Math.max(1, Math.min(64, size))
+    },
+    
+    /**
+     * Переключить snap to grid
+     */
+    toggleSnapToGrid() {
+      this.snapToGrid = !this.snapToGrid
     },
 
     /**

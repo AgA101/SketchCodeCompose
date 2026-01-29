@@ -32,8 +32,26 @@
             <h3>👁️ View</h3>
             <button class="menu-item" @click="handleMenuAction('toggleGrid')">
               <span>Show Grid</span>
-              <span class="shortcut">Ctrl+G</span>
+              <span class="shortcut">{{ canvasStore.showGrid ? '✓' : '' }} G</span>
             </button>
+            <button class="menu-item" @click="handleMenuAction('toggleSnapToGrid')">
+              <span>Snap to Grid</span>
+              <span class="shortcut">{{ canvasStore.snapToGrid ? '✓' : '' }} Shift+G</span>
+            </button>
+            <div class="grid-size-selector">
+              <span class="grid-size-label">Grid Size:</span>
+              <div class="grid-size-buttons">
+                <button 
+                  v-for="size in [1, 2, 4, 8, 16, 32]" 
+                  :key="size"
+                  class="grid-size-btn"
+                  :class="{ active: canvasStore.gridSize === size }"
+                  @click="handleMenuAction('setGridSize', size)"
+                >
+                  {{ size }}px
+                </button>
+              </div>
+            </div>
             <button class="menu-item" @click="handleMenuAction('toggleSemantics')">
               <span>Semantic Mode</span>
               <span class="shortcut">Ctrl+M</span>
@@ -99,12 +117,18 @@ function selectPreset(presetId) {
   layoutStore.saveLayout()
 }
 
-function handleMenuAction(action) {
-  console.log('Menu action:', action)
+function handleMenuAction(action, value) {
+  console.log('Menu action:', action, value)
 
   switch (action) {
     case 'toggleGrid':
       canvasStore.toggleGrid()
+      break
+    case 'toggleSnapToGrid':
+      canvasStore.toggleSnapToGrid()
+      break
+    case 'setGridSize':
+      canvasStore.setGridSize(value)
       break
     case 'toggleSemantics':
       canvasStore.toggleSemanticHighlight()
@@ -250,6 +274,51 @@ function handleMenuAction(action) {
   font-size: 12px;
   color: var(--color-text-tertiary);
   margin-top: var(--spacing-xs);
+}
+
+/* Grid Size Selector */
+.grid-size-selector {
+  padding: var(--spacing-sm) var(--spacing-md);
+  background-color: var(--color-bg-secondary);
+  border-radius: var(--radius-sm);
+  margin: var(--spacing-sm) 0;
+}
+
+.grid-size-label {
+  display: block;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--color-text-secondary);
+  margin-bottom: var(--spacing-xs);
+}
+
+.grid-size-buttons {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: var(--spacing-xs);
+}
+
+.grid-size-btn {
+  padding: 6px 8px;
+  background-color: var(--color-bg-primary);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  font-size: 11px;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  color: var(--color-text-primary);
+}
+
+.grid-size-btn:hover {
+  background-color: var(--color-bg-tertiary);
+  border-color: var(--color-accent);
+}
+
+.grid-size-btn.active {
+  background-color: var(--color-accent);
+  color: white;
+  border-color: var(--color-accent);
+  font-weight: 600;
 }
 
 /* Menu Footer */

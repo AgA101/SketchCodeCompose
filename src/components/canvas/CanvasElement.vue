@@ -39,6 +39,7 @@ import { useSelectionStore } from '@/stores/selectionStore'
 import { useCanvasStore } from '@/stores/canvasStore'
 import { Element } from '@/core/models/Element'
 import { ELEMENT_TYPES } from '@/constants/elementTypes'
+import { snapToGrid } from '@/core/utils/snap'
 
 // Для рекурсивного рендеринга импортируем сам себя
 import CanvasElement from './CanvasElement.vue'
@@ -226,16 +227,28 @@ function handleMouseMove(event) {
   const deltaX = event.clientX - dragStartX
   const deltaY = event.clientY - dragStartY
   
-  // Новая позиция
-  const newX = elementStartX + deltaX
-  const newY = elementStartY + deltaY
+  // Новая позиция (сырая)
+  const rawX = elementStartX + deltaX
+  const rawY = elementStartY + deltaY
+  
+  // Snap к сетке
+  const snappedX = snapToGrid(
+    Math.max(0, rawX),
+    canvasStore.gridSize,
+    canvasStore.snapToGrid
+  )
+  const snappedY = snapToGrid(
+    Math.max(0, rawY),
+    canvasStore.gridSize,
+    canvasStore.snapToGrid
+  )
   
   // Обновляем позицию через store
   projectStore.updateElement(props.elementId, {
     relativePosition: {
       ...element.value.relativePosition,
-      offsetX: Math.max(0, newX), // Не даем уйти в минус
-      offsetY: Math.max(0, newY)
+      offsetX: snappedX,
+      offsetY: snappedY
     }
   })
 }

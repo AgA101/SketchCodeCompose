@@ -42,6 +42,17 @@ export function useKeyboard() {
    * Обработчик keydown
    */
   const handleKeyDown = event => {
+    // Игнорируем горячие клавиши, если фокус в текстовом поле
+    const activeElement = document.activeElement
+    const isTyping = 
+      activeElement.tagName === 'INPUT' ||
+      activeElement.tagName === 'TEXTAREA' ||
+      activeElement.isContentEditable
+    
+    if (isTyping) {
+      return // Не перехватываем клавиши при наборе текста
+    }
+
     const keyString = buildKeyString(event)
     const handler = shortcuts.get(keyString)
 

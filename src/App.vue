@@ -24,6 +24,9 @@ const selectionStore = useSelectionStore()
 const canvasStore = useCanvasStore()
 const isDarkMode = computed(() => settingsStore.theme === 'dark')
 
+// Инициализируем горячие клавиши (на верхнем уровне setup!)
+const keyboard = useKeyboard()
+
 onMounted(() => {
   // Загружаем настройки
   settingsStore.load()
@@ -38,13 +41,12 @@ onMounted(() => {
   // Инициализируем автосохранение
   useAutoSave()
   
-  // Инициализируем горячие клавиши
+  // Регистрируем горячие клавиши
   setupHotkeys()
 })
 
 // Настройка горячих клавиш
 function setupHotkeys() {
-  const keyboard = useKeyboard()
   
   // Сохранение проекта
   keyboard.register('ctrl+s', () => {
@@ -77,9 +79,13 @@ function setupHotkeys() {
     }
   })
   
-  // Grid
-  keyboard.register('ctrl+g', () => {
+  // Grid (без Ctrl, чтобы избежать конфликтов с браузером)
+  keyboard.register('g', () => {
     canvasStore.toggleGrid()
+  })
+  
+  keyboard.register('shift+g', () => {
+    canvasStore.toggleSnapToGrid()
   })
   
   // Undo/Redo (заглушки)
