@@ -45,9 +45,9 @@ export function useKeyboard() {
     // Игнорируем горячие клавиши, если фокус в текстовом поле
     const activeElement = document.activeElement
     const isTyping = 
-      activeElement.tagName === 'INPUT' ||
-      activeElement.tagName === 'TEXTAREA' ||
-      activeElement.isContentEditable
+      activeElement?.tagName === 'INPUT' ||
+      activeElement?.tagName === 'TEXTAREA' ||
+      (activeElement instanceof HTMLElement && activeElement.isContentEditable)
     
     if (isTyping) {
       return // Не перехватываем клавиши при наборе текста
