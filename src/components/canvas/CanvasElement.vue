@@ -4,9 +4,11 @@
     :class="{ 
       'canvas-element--selected': isSelected,
       'canvas-element--hovered': isHovered,
-      'canvas-element--dragging': isDragging
+      'canvas-element--dragging': isDragging,
+      'canvas-element--drop-target': isDropTarget
     }"
     :style="elementStyle"
+    :data-element-id="elementId"
     @mouseenter="handleMouseEnter"
     @mouseleave="handleMouseLeave"
     @mousedown="handleMouseDown"
@@ -25,10 +27,13 @@
       :element-id="childId"
     />
 
-    <!-- Handles для выделенного элемента (реализуем позже) -->
-    <div v-if="isSelected" class="canvas-element__handles">
-      <!-- TODO: Resize handles -->
-    </div>
+    <!-- Handles для выделенного элемента -->
+    <ResizeHandles
+      v-if="isSelected"
+      :element-id="elementId"
+      @resize-start="handleResizeStart"
+      @reparent-start="handleReparentStart"
+    />
   </div>
 </template>
 
@@ -40,9 +45,13 @@ import { useCanvasStore } from '@/stores/canvasStore'
 import { Element } from '@/core/models/Element'
 import { ELEMENT_TYPES } from '@/constants/elementTypes'
 import { snapToGrid } from '@/core/utils/snap'
+import { useResize } from '@/composables/useResize'
+import { useReparent } from '@/composables/useReparent'
+import { isOverlapping, isFullyInside, getAbsolutePosition } from '@/core/utils/geometry'
 
 // Для рекурсивного рендеринга импортируем сам себя
 import CanvasElement from './CanvasElement.vue'
+import ResizeHandles from './ResizeHandles.vue'
 
 const props = defineProps({
   elementId: {
@@ -54,6 +63,15 @@ const props = defineProps({
 const projectStore = useProjectStore()
 const selectionStore = useSelectionStore()
 const canvasStore = useCanvasStore()
+
+// Композаблы для resize и reparent
+const { startResize } = useResize()
+const { startReparent, potentialParentId } = useReparent()
+
+// Проверяем, является ли текущий элемент потенциальной целью для drop
+const isDropTarget = computed(() => 
+  potentialParentId.value === props.elementId
+)
 
 // Получаем элемент из store
 const element = computed(() => projectStore.getElementById(props.elementId))
@@ -227,23 +245,24 @@ function handleMouseMove(event) {
   const deltaX = event.clientX - dragStartX
   const deltaY = event.clientY - dragStartY
   
-  // Новая позиция (сырая)
+  // Новая позиция (без ограничений - элемент может выходить за границы родителя)
   const rawX = elementStartX + deltaX
   const rawY = elementStartY + deltaY
   
-  // Snap к сетке
+  // Snap к сетке (разрешаем отрицательные значения)
   const snappedX = snapToGrid(
-    Math.max(0, rawX),
+    rawX,
     canvasStore.gridSize,
     canvasStore.snapToGrid
   )
   const snappedY = snapToGrid(
-    Math.max(0, rawY),
+    rawY,
     canvasStore.gridSize,
     canvasStore.snapToGrid
   )
   
-  // Обновляем позицию через store
+  // Обновляем позицию через store (БЕЗ ограничений Math.max)
+  // Дочерние элементы могут иметь отрицательный offset (выходить за границы родителя)
   projectStore.updateElement(props.elementId, {
     relativePosition: {
       ...element.value.relativePosition,
@@ -260,7 +279,154 @@ function handleMouseUp() {
     // Убираем глобальные слушатели
     document.removeEventListener('mousemove', handleMouseMove)
     document.removeEventListener('mouseup', handleMouseUp)
+    
+    // Проверяем автоматический reparent (если элемент перестал пересекаться с родителем)
+    checkAutoReparent()
   }
+}
+
+/**
+ * Автоматическая проверка и смена родителя
+ * Вызывается при завершении обычного drag
+ */
+function checkAutoReparent() {
+  const currentElement = element.value
+  if (!currentElement || !currentElement.parentId) return
+  
+  const currentParent = projectStore.getElementById(currentElement.parentId)
+  if (!currentParent) return
+  
+  // Проверяем, пересекается ли элемент с текущим родителем
+  // Родитель в своей системе координат находится в (0, 0)
+  // Ребенок имеет относительные координаты (offsetX, offsetY)
+  const parentRect = {
+    offsetX: 0,
+    offsetY: 0,
+    width: currentParent.relativePosition.width,
+    height: currentParent.relativePosition.height
+  }
+  
+  const hasOverlap = isOverlapping(
+    currentElement.relativePosition,
+    parentRect
+  )
+  
+  console.log('🔍 Auto reparent check:', {
+    elementId: currentElement.id,
+    currentParentId: currentElement.parentId,
+    hasOverlap,
+    elementPos: currentElement.relativePosition
+  })
+  
+  // Если есть пересечение - всё ок, родитель не меняется
+  if (hasOverlap) return
+  
+  // Нет пересечения - ищем нового родителя
+  const newParent = findDeepestContainingParent(currentElement)
+  
+  console.log('🔄 Changing parent:', {
+    oldParentId: currentElement.parentId,
+    newParentId: newParent ? newParent.id : null,
+    newParentName: newParent ? newParent.metadata.name : 'Canvas (root)'
+  })
+  
+  // Если новый родитель отличается от текущего - меняем
+  const newParentId = newParent ? newParent.id : null
+  if (newParentId !== currentElement.parentId) {
+    projectStore.updateElement(currentElement.id, {
+      parentId: newParentId
+    })
+  }
+}
+
+/**
+ * Поиск самого глубокого элемента, который ПОЛНОСТЬЮ содержит данный элемент
+ * @param {Object} targetElement - элемент, для которого ищем родителя
+ * @returns {Object|null} - найденный элемент-родитель или null
+ */
+function findDeepestContainingParent(targetElement) {
+  // Получаем абсолютные координаты целевого элемента
+  const targetAbsPos = getAbsolutePosition(targetElement, projectStore.getElementById)
+  
+  // Получаем все элементы кроме самого targetElement и его потомков
+  // project.elements это Map, нужно получить массив значений
+  const allElements = Array.from(projectStore.project.elements.values())
+  const candidateElements = allElements.filter(el => {
+    // Исключаем сам элемент
+    if (el.id === targetElement.id) return false
+    
+    // Исключаем потомков targetElement
+    if (isDescendant(el, targetElement.id)) return false
+    
+    return true
+  })
+  
+  // Ищем элементы, которые ПОЛНОСТЬЮ содержат targetElement
+  const containingElements = candidateElements.filter(el => {
+    const elAbsPos = getAbsolutePosition(el, projectStore.getElementById)
+    return isFullyInside(targetAbsPos, elAbsPos)
+  })
+  
+  // Из всех содержащих выбираем самый глубокий (с максимальной глубиной в иерархии)
+  if (containingElements.length === 0) return null
+  
+  let deepest = containingElements[0]
+  let maxDepth = getElementDepth(deepest)
+  
+  for (const el of containingElements) {
+    const depth = getElementDepth(el)
+    if (depth > maxDepth) {
+      maxDepth = depth
+      deepest = el
+    }
+  }
+  
+  return deepest
+}
+
+/**
+ * Получить глубину элемента в иерархии
+ * @param {Object} element
+ * @returns {number} - глубина (0 для корневых элементов)
+ */
+function getElementDepth(element) {
+  let depth = 0
+  let current = element
+  
+  while (current.parentId) {
+    depth++
+    current = projectStore.getElementById(current.parentId)
+    if (!current) break
+  }
+  
+  return depth
+}
+
+/**
+ * Проверка, является ли element потомком ancestor
+ * @param {Object} element - проверяемый элемент
+ * @param {string} ancestorId - ID предполагаемого предка
+ * @returns {boolean}
+ */
+function isDescendant(element, ancestorId) {
+  let current = element
+  
+  while (current.parentId) {
+    if (current.parentId === ancestorId) return true
+    current = projectStore.getElementById(current.parentId)
+    if (!current) break
+  }
+  
+  return false
+}
+
+// Обработчики для ResizeHandles
+function handleResizeStart({ event, position, elementId }) {
+  startResize(event, position, elementId)
+}
+
+function handleReparentStart({ event, elementId }) {
+  startReparent(event, elementId)
 }
 </script>
 
@@ -306,11 +472,11 @@ function handleMouseUp() {
   z-index: 100;
 }
 
-/* Handles (пока пустой, реализуем позже) */
-.canvas-element__handles {
-  position: absolute;
-  inset: -4px;
-  pointer-events: none;
+/* Drop target для reparenting */
+.canvas-element--drop-target {
+  outline: 3px dashed var(--color-success, #4CAF50) !important;
+  outline-offset: -3px;
+  background-color: rgba(76, 175, 80, 0.1) !important;
 }
 </style>
 

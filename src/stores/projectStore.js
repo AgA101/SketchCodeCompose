@@ -1,5 +1,6 @@
 import { defineStore } from 'pinia'
 import { Project } from '@/core/models/Project'
+import { recalculateRelativePosition } from '@/core/utils/geometry'
 import { Element } from '@/core/models/Element'
 
 export const useProjectStore = defineStore('project', {
@@ -85,6 +86,74 @@ export const useProjectStore = defineStore('project', {
 
       const element = this.project.getElementById(id)
       if (!element) return
+
+      // Если меняется родитель - обновляем children у старого и нового родителя
+      if (updates.parentId !== undefined && updates.parentId !== element.parentId) {
+        const oldParentId = element.parentId
+        const newParentId = updates.parentId
+        
+        console.log('📦 Reparenting element:', {
+          elementId: id,
+          oldParentId,
+          newParentId,
+          rootElementsBefore: [...this.project.rootElements]
+        })
+        
+        // Удаляем из children старого родителя
+        if (oldParentId) {
+          const oldParent = this.project.getElementById(oldParentId)
+          if (oldParent && oldParent.children) {
+            oldParent.children = oldParent.children.filter(childId => childId !== id)
+          }
+        }
+        
+        // Удаляем из rootElements если был корневым
+        if (!oldParentId) {
+          this.project.rootElements = this.project.rootElements.filter(rootId => rootId !== id)
+        }
+        
+        // Добавляем в children нового родителя или в rootElements
+        if (newParentId) {
+          const newParent = this.project.getElementById(newParentId)
+          if (newParent) {
+            if (!newParent.children) {
+              newParent.children = []
+            }
+            if (!newParent.children.includes(id)) {
+              newParent.children.push(id)
+            }
+          }
+        } else {
+          // Новый родитель = null, элемент становится корневым
+          if (!this.project.rootElements.includes(id)) {
+            this.project.rootElements.push(id)
+          }
+        }
+        
+        console.log('📦 After reparenting:', {
+          rootElementsAfter: [...this.project.rootElements],
+          elementParentId: element.parentId
+        })
+        
+        // Пересчитываем относительные координаты для нового родителя
+        const newParent = newParentId ? this.project.getElementById(newParentId) : null
+        const newRelativePos = recalculateRelativePosition(
+          element,
+          newParent,
+          (id) => this.project.getElementById(id)
+        )
+        
+        console.log('📍 Recalculated position:', {
+          oldPos: element.relativePosition,
+          newPos: newRelativePos
+        })
+        
+        // Обновляем позицию
+        updates.relativePosition = {
+          ...element.relativePosition,
+          ...newRelativePos
+        }
+      }
 
       // Обновляем свойства
       Object.assign(element, updates)

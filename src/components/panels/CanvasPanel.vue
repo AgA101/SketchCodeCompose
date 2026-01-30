@@ -54,6 +54,7 @@ const toolbarRef = ref(null)
 // Получаем root элементы из проекта
 const rootElements = computed(() => {
   if (!projectStore.project) return []
+  // projectStore.rootElements уже возвращает элементы, извлекаем их ID
   return projectStore.rootElements.map(el => el.id)
 })
 
