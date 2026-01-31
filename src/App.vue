@@ -54,6 +54,14 @@ function setupHotkeys() {
   })
   
   // Инструменты
+  keyboard.register('v', () => {
+    canvasStore.setTool('select')
+  })
+  
+  keyboard.register('h', () => {
+    canvasStore.setTool('hand')
+  })
+  
   keyboard.register('ctrl+n', () => {
     canvasStore.setTool('block') // Новый объединённый инструмент
   })
@@ -86,6 +94,23 @@ function setupHotkeys() {
   
   keyboard.register('shift+g', () => {
     canvasStore.toggleSnapToGrid()
+  })
+  
+  // Pan со стрелочками (работает в любом режиме)
+  keyboard.register('arrowup', () => {
+    canvasStore.panBy(0, 50) // Двигаем вверх
+  })
+  
+  keyboard.register('arrowdown', () => {
+    canvasStore.panBy(0, -50) // Двигаем вниз
+  })
+  
+  keyboard.register('arrowleft', () => {
+    canvasStore.panBy(50, 0) // Двигаем влево
+  })
+  
+  keyboard.register('arrowright', () => {
+    canvasStore.panBy(-50, 0) // Двигаем вправо
   })
   
   // Undo/Redo (заглушки)

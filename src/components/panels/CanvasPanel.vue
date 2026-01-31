@@ -9,9 +9,13 @@
         ref="viewportRef"
         class="canvas-viewport"
         :style="viewportStyle"
-        :class="{ [`canvas-viewport--${canvasStore.tool}`]: true }"
+        :class="{ 
+          [`canvas-viewport--${canvasStore.tool}`]: true,
+          'canvas-viewport--panning': isPanning
+        }"
         @click="handleCanvasClick"
         @contextmenu="handleContextMenu"
+        @mousedown="handleMouseDown"
       >
         <!-- Grid Overlay -->
         <GridOverlay />
@@ -50,6 +54,14 @@ const selectionStore = useSelectionStore()
 
 const viewportRef = ref(null)
 const toolbarRef = ref(null)
+
+// Pan состояние
+const isPanning = ref(false)
+const isSpacePressed = ref(false)
+let panStartX = 0
+let panStartY = 0
+let panInitialX = 0
+let panInitialY = 0
 
 // Получаем root элементы из виртуального корня
 const rootElements = computed(() => {
@@ -136,6 +148,76 @@ function createNewBlockAt(x, y) {
   projectStore.addElement(newElement)
 }
 
+// Mouse Down - начало pan или других действий
+function handleMouseDown(event) {
+  // Средняя кнопка мыши (колесико) - всегда pan
+  if (event.button === 1) {
+    event.preventDefault()
+    startPan(event)
+    return
+  }
+  
+  // Левая кнопка + Hand tool
+  if (event.button === 0 && canvasStore.tool === 'hand') {
+    event.preventDefault()
+    startPan(event)
+    return
+  }
+  
+  // Левая кнопка + Space (временная рука)
+  if (event.button === 0 && isSpacePressed.value) {
+    event.preventDefault()
+    startPan(event)
+    return
+  }
+}
+
+// Начало pan
+function startPan(event) {
+  isPanning.value = true
+  panStartX = event.clientX
+  panStartY = event.clientY
+  panInitialX = canvasStore.pan.x
+  panInitialY = canvasStore.pan.y
+  
+  document.addEventListener('mousemove', handlePanMove)
+  document.addEventListener('mouseup', handlePanEnd)
+}
+
+// Pan движение
+function handlePanMove(event) {
+  if (!isPanning.value) return
+  
+  const deltaX = (event.clientX - panStartX) / canvasStore.zoom
+  const deltaY = (event.clientY - panStartY) / canvasStore.zoom
+  
+  canvasStore.setPan(
+    panInitialX + deltaX,
+    panInitialY + deltaY
+  )
+}
+
+// Конец pan
+function handlePanEnd() {
+  isPanning.value = false
+  document.removeEventListener('mousemove', handlePanMove)
+  document.removeEventListener('mouseup', handlePanEnd)
+}
+
+// Keyboard - Space для временной руки
+function handleKeyDown(event) {
+  if (event.code === 'Space' && !isSpacePressed.value) {
+    isSpacePressed.value = true
+    event.preventDefault()
+  }
+}
+
+function handleKeyUp(event) {
+  if (event.code === 'Space') {
+    isSpacePressed.value = false
+  }
+}
+
 // Zoom с Ctrl+Scroll
 function handleWheel(event) {
   if (event.ctrlKey || event.metaKey) {
@@ -147,6 +229,15 @@ function handleWheel(event) {
     
     const newZoom = Math.max(0.1, Math.min(5, canvasStore.zoom * zoomFactor))
     canvasStore.setZoom(newZoom)
+  } else {
+    // Тачпад (двухпальцевый свайп) - панорамирование
+    // event.deltaX и event.deltaY содержат смещение
+    event.preventDefault() // Предотвращаем прокрутку страницы
+    
+    const deltaX = -event.deltaX / canvasStore.zoom
+    const deltaY = -event.deltaY / canvasStore.zoom
+    
+    canvasStore.panBy(deltaX, deltaY)
   }
 }
 
@@ -156,12 +247,23 @@ onMounted(() => {
     // Добавляем обработчик с passive: false для preventDefault
     viewportRef.value.addEventListener('wheel', handleWheel, { passive: false })
   }
+  
+  // Keyboard listeners для Space
+  window.addEventListener('keydown', handleKeyDown)
+  window.addEventListener('keyup', handleKeyUp)
 })
 
 onUnmounted(() => {
   if (viewportRef.value) {
     viewportRef.value.removeEventListener('wheel', handleWheel)
   }
+  
+  window.removeEventListener('keydown', handleKeyDown)
+  window.removeEventListener('keyup', handleKeyUp)
+  
+  // Cleanup pan listeners
+  document.removeEventListener('mousemove', handlePanMove)
+  document.removeEventListener('mouseup', handlePanEnd)
 })
 </script>
 
@@ -197,6 +299,15 @@ onUnmounted(() => {
 /* Курсоры для разных инструментов */
 .canvas-viewport--select {
   cursor: default;
+}
+
+.canvas-viewport--hand {
+  cursor: grab;
+}
+
+.canvas-viewport--hand:active,
+.canvas-viewport--panning {
+  cursor: grabbing !important;
 }
 
 .canvas-viewport--block {

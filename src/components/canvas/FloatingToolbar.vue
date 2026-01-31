@@ -51,19 +51,25 @@ const pinnedTools = ref([
   {
     id: 'select',
     icon: '🖱️',
-    label: 'Select & Move',
+    label: 'Select & Move (V)',
     action: () => setTool('select')
+  },
+  {
+    id: 'hand',
+    icon: '🖐️',
+    label: 'Hand Tool (H)\nPan canvas\nOr hold Space',
+    action: () => setTool('hand')
   },
   {
     id: 'block',
     icon: '🟦',
-    label: 'Block Tool (Ctrl+N)\nLeft Click = Add\nRight Click = Delete\nLong Press = Delete',
+    label: 'Block Tool (Ctrl+N)\nLeft Click = Add\nRight Click = Delete',
     action: () => setTool('block')
   },
   {
     id: 'grid',
     icon: '⊞',
-    label: 'Toggle Grid (Ctrl+G)',
+    label: 'Toggle Grid (G)',
     action: () => canvasStore.toggleGrid()
   },
   { id: 'undo', icon: '↶', label: 'Undo (Ctrl+Z)', action: () => console.log('Undo') },
