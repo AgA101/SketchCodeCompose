@@ -115,7 +115,6 @@ export class Project {
       name: this.name,
       version: this.version,
       elements: Array.from(this.elements.values())
-        .filter(el => el.id !== VIRTUAL_ROOT_ID) // Не сохраняем виртуальный элемент
         .map(el => el.toJSON ? el.toJSON() : el),
       canvas: this.canvas,
       globalStyles: this.globalStyles,
@@ -134,9 +133,17 @@ export class Project {
     // Восстанавливаем элементы
     const elements = new Map()
     json.elements.forEach(elementData => {
-      const { Element } = require('./Element')
-      const element = Element.fromJSON(elementData)
-      elements.set(element.id, element)
+      // Виртуальный элемент восстанавливаем особым образом
+      if (elementData.id === VIRTUAL_ROOT_ID) {
+        const { VirtualElement } = require('./VirtualElement')
+        const virtualElement = new VirtualElement()
+        virtualElement.children = elementData.children || []
+        elements.set(VIRTUAL_ROOT_ID, virtualElement)
+      } else {
+        const { Element } = require('./Element')
+        const element = Element.fromJSON(elementData)
+        elements.set(element.id, element)
+      }
     })
 
     return new Project({

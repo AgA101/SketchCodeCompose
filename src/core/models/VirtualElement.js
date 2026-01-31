@@ -25,5 +25,23 @@ export class VirtualElement extends Element {
       }
     })
   }
+  
+  /**
+   * Сериализация виртуального элемента
+   * Сохраняем только ID и children
+   */
+  toJSON() {
+    return {
+      id: this.id,
+      type: this.type,
+      parentId: this.parentId,
+      children: this.children,
+      relativePosition: this.relativePosition,
+      layout: this.layout,
+      styles: this.styles,
+      attributes: this.attributes,
+      metadata: this.metadata
+    }
+  }
 }
 
