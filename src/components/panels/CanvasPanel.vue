@@ -33,7 +33,7 @@
 </template>
 
 <script setup>
-import { ref, computed } from 'vue'
+import { ref, computed, onMounted, onUnmounted } from 'vue'
 import FloatingToolbar from '@/components/canvas/FloatingToolbar.vue'
 import CanvasElement from '@/components/canvas/CanvasElement.vue'
 import GridOverlay from '@/components/canvas/GridOverlay.vue'
@@ -66,8 +66,10 @@ const viewportStyle = computed(() => ({
 // Обработка левого клика
 function handleCanvasClick(event) {
   const rect = viewportRef.value.getBoundingClientRect()
-  const x = event.clientX - rect.left
-  const y = event.clientY - rect.top
+  
+  // Учитываем zoom при преобразовании координат
+  const x = (event.clientX - rect.left) / canvasStore.zoom
+  const y = (event.clientY - rect.top) / canvasStore.zoom
   
   switch (canvasStore.tool) {
     case 'block':
@@ -133,6 +135,34 @@ function createNewBlockAt(x, y) {
   
   projectStore.addElement(newElement)
 }
+
+// Zoom с Ctrl+Scroll
+function handleWheel(event) {
+  if (event.ctrlKey || event.metaKey) {
+    event.preventDefault() // Блокируем zoom браузера
+    event.stopPropagation()
+    
+    const delta = -event.deltaY
+    const zoomFactor = delta > 0 ? 1.1 : 0.9
+    
+    const newZoom = Math.max(0.1, Math.min(5, canvasStore.zoom * zoomFactor))
+    canvasStore.setZoom(newZoom)
+  }
+}
+
+// Lifecycle
+onMounted(() => {
+  if (viewportRef.value) {
+    // Добавляем обработчик с passive: false для preventDefault
+    viewportRef.value.addEventListener('wheel', handleWheel, { passive: false })
+  }
+})
+
+onUnmounted(() => {
+  if (viewportRef.value) {
+    viewportRef.value.removeEventListener('wheel', handleWheel)
+  }
+})
 </script>
 
 <style scoped>
@@ -151,17 +181,17 @@ function createNewBlockAt(x, y) {
 
 /* Canvas Viewport - область где рендерятся элементы */
 .canvas-viewport {
-  width: 100%;
-  height: 100%;
+  /* Огромный размер для "бесконечного" canvas */
+  width: 10000px;
+  height: 10000px;
   position: relative;
-  overflow: auto;
   background-color: #fafafa;
   background-image: 
     linear-gradient(rgba(0, 0, 0, 0.05) 1px, transparent 1px),
     linear-gradient(90deg, rgba(0, 0, 0, 0.05) 1px, transparent 1px);
   background-size: 20px 20px;
   cursor: default;
-  transition: transform 0.15s ease-out;
+  /* transform наследуется из :style */
 }
 
 /* Курсоры для разных инструментов */
