@@ -2,6 +2,7 @@ import { defineStore } from 'pinia'
 import { Project } from '@/core/models/Project'
 import { recalculateRelativePosition } from '@/core/utils/geometry'
 import { Element } from '@/core/models/Element'
+import { VIRTUAL_ROOT_ID } from '@/constants/elementTypes'
 
 export const useProjectStore = defineStore('project', {
   state: () => ({
@@ -17,14 +18,6 @@ export const useProjectStore = defineStore('project', {
     elements: state => {
       if (!state.project) return []
       return Array.from(state.project.elements.values())
-    },
-
-    /**
-     * Корневые элементы
-     */
-    rootElements: state => {
-      if (!state.project) return []
-      return state.project.getRootElements()
     },
 
     /**
@@ -89,57 +82,43 @@ export const useProjectStore = defineStore('project', {
 
       // Если меняется родитель - обновляем children у старого и нового родителя
       if (updates.parentId !== undefined && updates.parentId !== element.parentId) {
-        const oldParentId = element.parentId
-        const newParentId = updates.parentId
+        // null => VIRTUAL_ROOT_ID
+        const oldParentId = element.parentId || VIRTUAL_ROOT_ID
+        const newParentId = updates.parentId || VIRTUAL_ROOT_ID
         
         console.log('📦 Reparenting element:', {
           elementId: id,
           oldParentId,
-          newParentId,
-          rootElementsBefore: [...this.project.rootElements]
+          newParentId
         })
         
         // Удаляем из children старого родителя
-        if (oldParentId) {
-          const oldParent = this.project.getElementById(oldParentId)
-          if (oldParent && oldParent.children) {
-            oldParent.children = oldParent.children.filter(childId => childId !== id)
-          }
+        const oldParent = this.project.getElementById(oldParentId)
+        if (oldParent && oldParent.children) {
+          oldParent.children = oldParent.children.filter(childId => childId !== id)
         }
         
-        // Удаляем из rootElements если был корневым
-        if (!oldParentId) {
-          this.project.rootElements = this.project.rootElements.filter(rootId => rootId !== id)
-        }
-        
-        // Добавляем в children нового родителя или в rootElements
-        if (newParentId) {
-          const newParent = this.project.getElementById(newParentId)
-          if (newParent) {
-            if (!newParent.children) {
-              newParent.children = []
-            }
-            if (!newParent.children.includes(id)) {
-              newParent.children.push(id)
-            }
+        // Добавляем в children нового родителя
+        const newParent = this.project.getElementById(newParentId)
+        if (newParent) {
+          if (!newParent.children) {
+            newParent.children = []
           }
-        } else {
-          // Новый родитель = null, элемент становится корневым
-          if (!this.project.rootElements.includes(id)) {
-            this.project.rootElements.push(id)
+          if (!newParent.children.includes(id)) {
+            newParent.children.push(id)
           }
         }
         
         console.log('📦 After reparenting:', {
-          rootElementsAfter: [...this.project.rootElements],
-          elementParentId: element.parentId
+          newParentChildren: newParent?.children || []
         })
         
         // Пересчитываем относительные координаты для нового родителя
-        const newParent = newParentId ? this.project.getElementById(newParentId) : null
+        // Виртуальный root не имеет координат, используем null
+        const newParentForCalc = newParentId === VIRTUAL_ROOT_ID ? null : newParent
         const newRelativePos = recalculateRelativePosition(
           element,
-          newParent,
+          newParentForCalc,
           (id) => this.project.getElementById(id)
         )
         

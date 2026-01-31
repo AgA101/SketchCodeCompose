@@ -51,11 +51,10 @@ const selectionStore = useSelectionStore()
 const viewportRef = ref(null)
 const toolbarRef = ref(null)
 
-// Получаем root элементы из проекта
+// Получаем root элементы из виртуального корня
 const rootElements = computed(() => {
   if (!projectStore.project) return []
-  // projectStore.rootElements уже возвращает элементы, извлекаем их ID
-  return projectStore.rootElements.map(el => el.id)
+  return projectStore.project.virtualRoot?.children || []
 })
 
 // Стили для viewport (zoom, pan)

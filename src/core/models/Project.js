@@ -1,5 +1,7 @@
 import { v4 as uuidv4 } from 'uuid'
 import { APP_CONFIG } from '@/constants/config'
+import { VIRTUAL_ROOT_ID } from '@/constants/elementTypes'
+import { VirtualElement } from './VirtualElement'
 
 /**
  * Модель проекта
@@ -12,7 +14,9 @@ export class Project {
 
     // Элементы (Map для быстрого доступа по ID)
     this.elements = config.elements || new Map()
-    this.rootElements = config.rootElements || []
+    
+    // Создаём виртуальный корневой элемент (всегда)
+    this.elements.set(VIRTUAL_ROOT_ID, new VirtualElement())
 
     // Настройки canvas
     this.canvas = config.canvas || {
@@ -44,17 +48,12 @@ export class Project {
   addElement(element) {
     this.elements.set(element.id, element)
     
-    // Если нет родителя - добавляем в корневые
-    if (!element.parentId) {
-      if (!this.rootElements.includes(element.id)) {
-        this.rootElements.push(element.id)
-      }
-    } else {
-      // Если есть родитель - добавляем в его children
-      const parent = this.elements.get(element.parentId)
-      if (parent && !parent.children.includes(element.id)) {
-        parent.children.push(element.id)
-      }
+    // Если нет родителя - используем виртуальный корневой элемент
+    const parentId = element.parentId || VIRTUAL_ROOT_ID
+    const parent = this.elements.get(parentId)
+    
+    if (parent && !parent.children.includes(element.id)) {
+      parent.children.push(element.id)
     }
     
     this.metadata.updatedAt = new Date()
@@ -65,22 +64,20 @@ export class Project {
    */
   removeElement(elementId) {
     const element = this.elements.get(elementId)
-    if (!element) return
+    if (!element || elementId === VIRTUAL_ROOT_ID) return // Нельзя удалить виртуальный корень
 
     // Удаляем детей рекурсивно
-    element.children.forEach(childId => {
-      this.removeElement(childId)
-    })
+    if (element.children) {
+      element.children.forEach(childId => {
+        this.removeElement(childId)
+      })
+    }
 
-    // Удаляем из родителя
-    if (element.parentId) {
-      const parent = this.elements.get(element.parentId)
-      if (parent) {
-        parent.children = parent.children.filter(id => id !== elementId)
-      }
-    } else {
-      // Удаляем из корневых
-      this.rootElements = this.rootElements.filter(id => id !== elementId)
+    // Удаляем из родителя (или из виртуального корня)
+    const parentId = element.parentId || VIRTUAL_ROOT_ID
+    const parent = this.elements.get(parentId)
+    if (parent && parent.children) {
+      parent.children = parent.children.filter(id => id !== elementId)
     }
 
     // Удаляем элемент
@@ -103,10 +100,10 @@ export class Project {
   }
 
   /**
-   * Получить корневые элементы
+   * Получить виртуальный корневой элемент
    */
-  getRootElements() {
-    return this.rootElements.map(id => this.elements.get(id)).filter(Boolean)
+  get virtualRoot() {
+    return this.elements.get(VIRTUAL_ROOT_ID)
   }
 
   /**
@@ -117,8 +114,9 @@ export class Project {
       id: this.id,
       name: this.name,
       version: this.version,
-      elements: Array.from(this.elements.values()).map(el => el.toJSON()),
-      rootElements: this.rootElements,
+      elements: Array.from(this.elements.values())
+        .filter(el => el.id !== VIRTUAL_ROOT_ID) // Не сохраняем виртуальный элемент
+        .map(el => el.toJSON ? el.toJSON() : el),
       canvas: this.canvas,
       globalStyles: this.globalStyles,
       metadata: {
@@ -146,7 +144,6 @@ export class Project {
       name: json.name,
       version: json.version,
       elements,
-      rootElements: json.rootElements,
       canvas: json.canvas,
       globalStyles: json.globalStyles,
       metadata: {

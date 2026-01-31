@@ -1,5 +1,10 @@
+// ID виртуального корневого элемента
+export const VIRTUAL_ROOT_ID = '__virtual_root__'
+
 // Типы элементов
 export const ELEMENT_TYPES = {
+  // Виртуальный (не рендерится)
+  VIRTUAL: 'virtual',
   // Структурные
   CONTAINER: 'container',
   SECTION: 'section',
