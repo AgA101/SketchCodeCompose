@@ -87,6 +87,11 @@ function handleCanvasClick(event) {
     case 'block':
       createNewBlockAt(x, y)
       break
+    
+    case 'zoom':
+      // Левый клик = Zoom In (+10%)
+      canvasStore.zoomIn()
+      break
       
     case 'select':
     default:
@@ -100,6 +105,13 @@ function handleCanvasClick(event) {
 
 // Обработка правого клика
 function handleContextMenu(event) {
+  // Если активен Zoom Tool, правый клик = Zoom Out
+  if (canvasStore.tool === 'zoom') {
+    event.preventDefault()
+    canvasStore.zoomOut()
+    return
+  }
+  
   event.preventDefault()
 }
 
@@ -204,11 +216,22 @@ function handlePanEnd() {
   document.removeEventListener('mouseup', handlePanEnd)
 }
 
-// Keyboard - Space для временной руки
+// Keyboard - Space для временной руки, стрелочки для zoom
 function handleKeyDown(event) {
   if (event.code === 'Space' && !isSpacePressed.value) {
     isSpacePressed.value = true
     event.preventDefault()
+  }
+  
+  // Стрелочки вверх/вниз для zoom (только если активен Zoom Tool)
+  if (canvasStore.tool === 'zoom') {
+    if (event.code === 'ArrowUp') {
+      event.preventDefault()
+      canvasStore.zoomIn()
+    } else if (event.code === 'ArrowDown') {
+      event.preventDefault()
+      canvasStore.zoomOut()
+    }
   }
 }
 
@@ -312,6 +335,10 @@ onUnmounted(() => {
 
 .canvas-viewport--block {
   cursor: crosshair;
+}
+
+.canvas-viewport--zoom {
+  cursor: zoom-in;
 }
 
 .canvas-viewport--delete {

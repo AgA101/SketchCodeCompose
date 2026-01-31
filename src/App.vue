@@ -62,6 +62,10 @@ function setupHotkeys() {
     canvasStore.setTool('hand')
   })
   
+  keyboard.register('z', () => {
+    canvasStore.setTool('zoom')
+  })
+  
   keyboard.register('ctrl+n', () => {
     canvasStore.setTool('block') // Новый объединённый инструмент
   })

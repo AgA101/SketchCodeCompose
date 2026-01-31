@@ -52,17 +52,17 @@ export const useCanvasStore = defineStore('canvas', {
     },
 
     /**
-     * Увеличить zoom
+     * Увеличить zoom на 10%
      */
     zoomIn() {
-      this.setZoom(this.zoom * 1.2)
+      this.setZoom(this.zoom * 1.1)
     },
 
     /**
-     * Уменьшить zoom
+     * Уменьшить zoom на 10%
      */
     zoomOut() {
-      this.setZoom(this.zoom / 1.2)
+      this.setZoom(this.zoom / 1.1)
     },
 
     /**
@@ -85,15 +85,20 @@ export const useCanvasStore = defineStore('canvas', {
      * Установить pan
      */
     setPan(x, y) {
-      this.pan = { x, y }
+      // Ограничиваем pan: оставляем небольшой отступ (100px) чтобы видеть границу
+      // Вправо и вниз — можно бесконечно
+      const BORDER_OFFSET = 25
+      this.pan = { 
+        x: Math.min(BORDER_OFFSET, x), 
+        y: Math.min(BORDER_OFFSET, y) 
+      }
     },
 
     /**
      * Сдвинуть canvas
      */
     panBy(deltaX, deltaY) {
-      this.pan.x += deltaX
-      this.pan.y += deltaY
+      this.setPan(this.pan.x + deltaX, this.pan.y + deltaY)
     },
 
     /**

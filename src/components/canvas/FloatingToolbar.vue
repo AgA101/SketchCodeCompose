@@ -67,6 +67,12 @@ const pinnedTools = ref([
     action: () => setTool('block')
   },
   {
+    id: 'zoom',
+    icon: '🔍',
+    label: 'Zoom Tool (Z)\nLeft Click = Zoom In (+10%)\nRight Click = Zoom Out (-10%)\nArrow Up/Down = Zoom',
+    action: () => setTool('zoom')
+  },
+  {
     id: 'grid',
     icon: '⊞',
     label: 'Toggle Grid (G)',
