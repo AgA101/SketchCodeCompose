@@ -291,37 +291,53 @@ function handleMouseUp() {
  */
 function checkAutoReparent() {
   const currentElement = element.value
-  if (!currentElement || !currentElement.parentId) return
+  if (!currentElement) return
   
-  const currentParent = projectStore.getElementById(currentElement.parentId)
-  if (!currentParent) return
-  
-  // Проверяем, пересекается ли элемент с текущим родителем
-  // Родитель в своей системе координат находится в (0, 0)
-  // Ребенок имеет относительные координаты (offsetX, offsetY)
-  const parentRect = {
-    offsetX: 0,
-    offsetY: 0,
-    width: currentParent.relativePosition.width,
-    height: currentParent.relativePosition.height
+  // Если есть текущий родитель - проверяем пересечение с ним
+  if (currentElement.parentId) {
+    const currentParent = projectStore.getElementById(currentElement.parentId)
+    if (!currentParent) return
+    
+    // Проверяем, пересекается ли элемент с текущим родителем
+    // Родитель в своей системе координат находится в (0, 0)
+    const parentRect = {
+      offsetX: 0,
+      offsetY: 0,
+      width: currentParent.relativePosition.width,
+      height: currentParent.relativePosition.height
+    }
+    
+    const hasOverlap = isOverlapping(
+      currentElement.relativePosition,
+      parentRect
+    )
+    
+    console.log('🔍 Auto reparent check (has parent):', {
+      elementId: currentElement.id,
+      currentParentId: currentElement.parentId,
+      hasOverlap,
+      elementPos: currentElement.relativePosition
+    })
+    
+    // Если есть пересечение - проверяем, может есть более глубокий родитель
+    if (hasOverlap) {
+      const deeperParent = findDeepestContainingParent(currentElement)
+      // Меняем только если нашли более глубокого родителя
+      if (deeperParent && deeperParent.id !== currentElement.parentId) {
+        console.log('🔄 Found deeper parent:', {
+          oldParentId: currentElement.parentId,
+          newParentId: deeperParent.id
+        })
+        projectStore.updateElement(currentElement.id, {
+          parentId: deeperParent.id
+        })
+      }
+      return
+    }
   }
   
-  const hasOverlap = isOverlapping(
-    currentElement.relativePosition,
-    parentRect
-  )
-  
-  console.log('🔍 Auto reparent check:', {
-    elementId: currentElement.id,
-    currentParentId: currentElement.parentId,
-    hasOverlap,
-    elementPos: currentElement.relativePosition
-  })
-  
-  // Если есть пересечение - всё ок, родитель не меняется
-  if (hasOverlap) return
-  
-  // Нет пересечения - ищем нового родителя
+  // Нет родителя ИЛИ нет пересечения с текущим родителем
+  // Ищем нового подходящего родителя
   const newParent = findDeepestContainingParent(currentElement)
   
   console.log('🔄 Changing parent:', {
