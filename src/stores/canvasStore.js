@@ -52,17 +52,17 @@ export const useCanvasStore = defineStore('canvas', {
     },
 
     /**
-     * Увеличить zoom на 10%
+     * Увеличить zoom на 10% (добавить 0.1)
      */
     zoomIn() {
-      this.setZoom(this.zoom * 1.1)
+      this.setZoom(this.zoom + 0.1)
     },
 
     /**
-     * Уменьшить zoom на 10%
+     * Уменьшить zoom на 10% (вычесть 0.1)
      */
     zoomOut() {
-      this.setZoom(this.zoom / 1.1)
+      this.setZoom(this.zoom - 0.1)
     },
 
     /**

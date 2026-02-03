@@ -13,11 +13,15 @@
           v-for="tool in pinnedTools"
           :key="tool.id"
           class="tool-button"
-          :class="{ 'tool-button--active': isToolActive(tool.id) }"
+          :class="{ 
+            'tool-button--active': isToolActive(tool.id),
+            'tool-button--zoom': tool.id === 'zoom'
+          }"
           :title="tool.label"
           @click="tool.action"
         >
-          {{ tool.icon }}
+          <span v-if="tool.id === 'zoom'" class="zoom-text">{{ canvasStore.zoomPercent }}%</span>
+          <span v-else>{{ tool.icon }}</span>
         </button>
       </div>
     </div>
@@ -157,6 +161,18 @@ const pinnedTools = ref([
 .tool-button--active {
   background-color: var(--color-accent) !important;
   color: white;
+}
+
+/* Zoom кнопка - шире для текста */
+.tool-button--zoom {
+  min-width: 52px;
+  padding: 0 6px;
+}
+
+.zoom-text {
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: -0.5px;
 }
 
 /* Все стили меню удалены - теперь используется общий BurgerMenu */
