@@ -20,6 +20,13 @@
         <!-- Grid Overlay -->
         <GridOverlay />
         
+        <!-- Smart Guides -->
+        <SmartGuides
+          :guides="canvasStore.guides"
+          :canvas-width="10000"
+          :canvas-height="10000"
+        />
+        
         <!-- Рендерим все root элементы -->
         <CanvasElement
           v-for="elementId in rootElements"
@@ -41,6 +48,7 @@ import { ref, computed, onMounted, onUnmounted } from 'vue'
 import FloatingToolbar from '@/components/canvas/FloatingToolbar.vue'
 import CanvasElement from '@/components/canvas/CanvasElement.vue'
 import GridOverlay from '@/components/canvas/GridOverlay.vue'
+import SmartGuides from '@/components/canvas/SmartGuides.vue'
 import { useProjectStore } from '@/stores/projectStore'
 import { useCanvasStore } from '@/stores/canvasStore'
 import { useSelectionStore } from '@/stores/selectionStore'

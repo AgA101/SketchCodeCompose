@@ -55,6 +55,7 @@ import { ELEMENT_TYPES } from '@/constants/elementTypes'
 import { snapToGrid } from '@/core/utils/snap'
 import { useResize } from '@/composables/useResize'
 import { useReparent } from '@/composables/useReparent'
+import { useSmartGuides } from '@/composables/useSmartGuides'
 import { isOverlapping, isFullyInside, getAbsolutePosition } from '@/core/utils/geometry'
 
 // Для рекурсивного рендеринга импортируем сам себя
@@ -90,6 +91,27 @@ const allElements = computed(() => {
   if (!projectStore.project) return []
   return Array.from(projectStore.project.elements.values())
 })
+
+// Функции для Smart Guides - вызываем useSmartGuides динамически
+function calculateGuidesWrapper(currentElement, currentAbsPos) {
+  const { calculateGuides } = useSmartGuides({
+    draggedElement: element.value,
+    allElements: allElements.value,
+    getElementById: projectStore.getElementById,
+    snapThreshold: canvasStore.snapDistance
+  })
+  return calculateGuides(currentElement, currentAbsPos)
+}
+
+function snapToGuidesWrapper(position, guides, currentAbsPos) {
+  const { snapToGuides } = useSmartGuides({
+    draggedElement: element.value,
+    allElements: allElements.value,
+    getElementById: projectStore.getElementById,
+    snapThreshold: canvasStore.snapDistance
+  })
+  return snapToGuides(position, guides, currentAbsPos)
+}
 
 // Проверяем выделен ли элемент
 const isSelected = computed(() => 
@@ -265,16 +287,41 @@ function handleMouseMove(event) {
   const rawY = elementStartY + deltaY
   
   // Snap к сетке (разрешаем отрицательные значения)
-  const snappedX = snapToGrid(
+  let snappedX = snapToGrid(
     rawX,
     canvasStore.gridSize,
     canvasStore.snapToGrid
   )
-  const snappedY = snapToGrid(
+  let snappedY = snapToGrid(
     rawY,
     canvasStore.gridSize,
     canvasStore.snapToGrid
   )
+  
+  // Smart Guides: если включен snapToElements
+  if (canvasStore.snapToElements) {
+    // Временно обновляем позицию для расчёта направляющих
+    const tempAbsPos = getAbsolutePosition(
+      { ...element.value, relativePosition: { ...element.value.relativePosition, offsetX: snappedX, offsetY: snappedY } },
+      projectStore.getElementById
+    )
+    
+    // Рассчитываем направляющие
+    const guides = calculateGuidesWrapper(element.value, tempAbsPos)
+    
+    // Обновляем направляющие в store для отображения
+    canvasStore.guides = guides
+    
+    // Применяем snap к направляющим
+    const snappedPosition = snapToGuidesWrapper(
+      { offsetX: snappedX, offsetY: snappedY },
+      guides,
+      tempAbsPos
+    )
+    
+    snappedX = snappedPosition.offsetX
+    snappedY = snappedPosition.offsetY
+  }
   
   // Обновляем позицию через store (БЕЗ ограничений Math.max)
   // Дочерние элементы могут иметь отрицательный offset (выходить за границы родителя)
@@ -290,6 +337,9 @@ function handleMouseMove(event) {
 function handleMouseUp() {
   if (isDragging.value) {
     isDragging.value = false
+    
+    // Очищаем направляющие
+    canvasStore.guides = []
     
     // Убираем глобальные слушатели
     document.removeEventListener('mousemove', handleMouseMove)

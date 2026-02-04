@@ -14,7 +14,7 @@
           :key="tool.id"
           class="tool-button"
           :class="{ 
-            'tool-button--active': isToolActive(tool.id),
+            'tool-button--active': isToolActive(tool.id) || (tool.id === 'grid' && canvasStore.showGrid) || (tool.id === 'snap' && canvasStore.snapToElements),
             'tool-button--zoom': tool.id === 'zoom'
           }"
           :title="tool.label"
@@ -81,6 +81,12 @@ const pinnedTools = ref([
     icon: '⊞',
     label: 'Toggle Grid (G)',
     action: () => canvasStore.toggleGrid()
+  },
+  {
+    id: 'snap',
+    icon: '🧲',
+    label: 'Smart Guides - Snap to Elements\nAlignment guides while dragging',
+    action: () => canvasStore.snapToElements = !canvasStore.snapToElements
   },
   { id: 'undo', icon: '↶', label: 'Undo (Ctrl+Z)', action: () => console.log('Undo') },
   { id: 'redo', icon: '↷', label: 'Redo (Ctrl+Shift+Z)', action: () => console.log('Redo') }
