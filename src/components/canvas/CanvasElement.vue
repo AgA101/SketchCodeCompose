@@ -34,6 +34,14 @@
       @resize-start="handleResizeStart"
       @reparent-start="handleReparentStart"
     />
+
+    <!-- Distance Indicators для выделенного или перемещаемого элемента -->
+    <DistanceIndicators
+      v-if="isSelected || isDragging"
+      :element="element"
+      :all-elements="allElements"
+      :get-element-by-id="projectStore.getElementById"
+    />
   </div>
 </template>
 
@@ -52,6 +60,7 @@ import { isOverlapping, isFullyInside, getAbsolutePosition } from '@/core/utils/
 // Для рекурсивного рендеринга импортируем сам себя
 import CanvasElement from './CanvasElement.vue'
 import ResizeHandles from './ResizeHandles.vue'
+import DistanceIndicators from './DistanceIndicators.vue'
 
 const props = defineProps({
   elementId: {
@@ -75,6 +84,12 @@ const isDropTarget = computed(() =>
 
 // Получаем элемент из store
 const element = computed(() => projectStore.getElementById(props.elementId))
+
+// Получаем все элементы для Distance Indicators
+const allElements = computed(() => {
+  if (!projectStore.project) return []
+  return Array.from(projectStore.project.elements.values())
+})
 
 // Проверяем выделен ли элемент
 const isSelected = computed(() => 
